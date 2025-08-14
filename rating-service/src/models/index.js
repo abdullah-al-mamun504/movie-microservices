@@ -1,5 +1,6 @@
 const { Sequelize } = require('sequelize');
-const config = require('../config/config');
+const env = process.env.NODE_ENV || 'development';
+const config = require('../config/config')[env]; // This is the fix
 const Rating = require('./rating');
 
 const sequelize = new Sequelize(config.database, config.username, config.password, {
