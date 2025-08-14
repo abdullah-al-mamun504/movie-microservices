@@ -1,17 +1,17 @@
 import logging
 from typing import List, Dict, Any
 import httpx
-from datetime import datetime  # Added missing import
-from schemas import Recommendation as RecommendationSchema  # Fixed import
-from utils import get_redis_client  # Fixed import
+from src.schemas import Recommendation as RecommendationSchema
+from src.utils import get_redis_client
 import json
+from datetime import datetime  # Added missing import
 
 logger = logging.getLogger(__name__)
 
 class RecommendationService:
     def __init__(self):
         self.redis_client = get_redis_client()
-
+    
     async def extract_user_preferences(self, user_ratings: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Extract user preferences based on their ratings.
@@ -26,51 +26,45 @@ class RecommendationService:
                 "high_rated_movies": [],
                 "low_rated_movies": []
             }
-
+            
             if not user_ratings:
                 return preferences
-
+            
             # Calculate average rating
             total_rating = sum(rating.get("rating", 0) for rating in user_ratings)
             preferences["average_rating"] = total_rating / len(user_ratings)
-
+            
             # Categorize movies by rating
             for rating in user_ratings:
                 movie_id = rating.get("movie_id")
                 rating_value = rating.get("rating", 0)
-
                 if rating_value >= 7:
                     preferences["high_rated_movies"].append(movie_id)
                 elif rating_value <= 4:
                     preferences["low_rated_movies"].append(movie_id)
-
+            
             # Get movie details for high-rated movies to extract preferences
             movie_service_url = "http://movie-service:3001"
-
             async with httpx.AsyncClient() as client:
                 for movie_id in preferences["high_rated_movies"][:10]:  # Limit to top 10
                     try:
                         response = await client.get(f"{movie_service_url}/api/movies/{movie_id}")
                         if response.status_code == 200:
                             movie = response.json().get("data", {})
-
                             # Extract genres (simplified - in a real system, we'd have genre IDs)
                             # This is a placeholder implementation
                             if movie.get("genre"):
                                 genre = movie["genre"]
                                 preferences["genres"][genre] = preferences["genres"].get(genre, 0) + 1
-
                             # Extract director
                             if movie.get("director"):
                                 director = movie["director"]
                                 preferences["directors"][director] = preferences["directors"].get(director, 0) + 1
-
                     except Exception as e:
                         logger.error(f"Error getting movie details for ID {movie_id}: {str(e)}")
                         continue
-
+            
             return preferences
-
         except Exception as e:
             logger.error(f"Error extracting user preferences: {str(e)}")
             return {
@@ -81,7 +75,7 @@ class RecommendationService:
                 "high_rated_movies": [],
                 "low_rated_movies": []
             }
-
+    
     async def generate_recommendations(
         self,
         user_preferences: Dict[str, Any],
@@ -93,7 +87,7 @@ class RecommendationService:
         """
         try:
             recommendations = []
-
+            
             # If we don't have user preferences, return popular movies
             if not user_preferences["high_rated_movies"]:
                 for movie in popular_movies[:limit]:
@@ -106,12 +100,11 @@ class RecommendationService:
                         created_at=datetime.now()
                     )
                     recommendations.append(rec)
-
                 return recommendations
-
+            
             # Get movie details for high-rated movies to find similar ones
             movie_service_url = "http://movie-service:3001"
-
+            
             # For each high-rated movie, find similar movies
             for movie_id in user_preferences["high_rated_movies"][:3]:  # Limit to top 3
                 try:
@@ -120,7 +113,6 @@ class RecommendationService:
                         response = await client.get(f"{movie_service_url}/api/movies/{movie_id}/similar")
                         if response.status_code == 200:
                             similar_movies = response.json().get("data", [])
-
                             for movie in similar_movies[:2]:  # Take top 2 similar movies
                                 # Check if user has already rated this movie
                                 # This is a simplified check - in a real system, we'd query the rating service
@@ -129,7 +121,6 @@ class RecommendationService:
                                 #     if rated_movie.get("movie_id") == movie.get("id"):
                                 #         already_rated = True
                                 #         break
-
                                 if not already_rated:
                                     rec = RecommendationSchema(
                                         id=0,  # Will be set when saved to DB
@@ -140,11 +131,10 @@ class RecommendationService:
                                         created_at=datetime.now()
                                     )
                                     recommendations.append(rec)
-
                 except Exception as e:
                     logger.error(f"Error getting similar movies for ID {movie_id}: {str(e)}")
                     continue
-
+            
             # If we don't have enough recommendations, add popular movies
             if len(recommendations) < limit:
                 for movie in popular_movies:
@@ -152,7 +142,6 @@ class RecommendationService:
                     already_recommended = any(
                         rec.movie_id == movie.get("id") for rec in recommendations
                     )
-
                     if not already_recommended:
                         rec = RecommendationSchema(
                             id=0,  # Will be set when saved to DB
@@ -163,14 +152,12 @@ class RecommendationService:
                             created_at=datetime.now()
                         )
                         recommendations.append(rec)
-
                         if len(recommendations) >= limit:
                             break
-
+            
             # Sort by score and return top recommendations
             recommendations.sort(key=lambda x: x.score, reverse=True)
             return recommendations[:limit]
-
         except Exception as e:
             logger.error(f"Error generating recommendations: {str(e)}")
             # Return popular movies as fallback
@@ -185,9 +172,8 @@ class RecommendationService:
                     created_at=datetime.now()
                 )
                 fallback_recommendations.append(rec)
-
             return fallback_recommendations
-
+    
     async def get_similar_movies(
         self,
         movie: Dict[str, Any],
@@ -200,7 +186,7 @@ class RecommendationService:
             # This is a simplified implementation
             # In a real system, we would use more sophisticated algorithms
             movie_service_url = "http://movie-service:3001"
-
+            
             # Get movies with the same genre
             genre = movie.get("genre")
             if not genre:
@@ -209,7 +195,6 @@ class RecommendationService:
                     response = await client.get(f"{movie_service_url}/api/movies/popular/tmdb")
                     if response.status_code == 200:
                         popular_movies = response.json().get("data", {}).get("results", [])
-
                         recommendations = []
                         for popular_movie in popular_movies[:limit]:
                             rec = RecommendationSchema(
@@ -221,21 +206,18 @@ class RecommendationService:
                                 created_at=datetime.now()
                             )
                             recommendations.append(rec)
-
                         return recommendations
-
+            
             # Get movies with the same genre
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{movie_service_url}/api/movies?genre={genre}&limit={limit + 5}")
                 if response.status_code == 200:
                     movies_data = response.json().get("data", [])
-
                     recommendations = []
                     for similar_movie in movies_data:
                         # Skip the movie itself
                         if similar_movie.get("id") == movie.get("id"):
                             continue
-
                         rec = RecommendationSchema(
                             id=0,  # Will be set when saved to DB
                             user_id=0,  # System recommendation
@@ -245,18 +227,15 @@ class RecommendationService:
                             created_at=datetime.now()
                         )
                         recommendations.append(rec)
-
                         if len(recommendations) >= limit:
                             break
-
                     return recommendations
-
+            
             # Fallback to popular movies
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{movie_service_url}/api/movies/popular/tmdb")
                 if response.status_code == 200:
                     popular_movies = response.json().get("data", {}).get("results", [])
-
                     recommendations = []
                     for popular_movie in popular_movies[:limit]:
                         rec = RecommendationSchema(
@@ -268,11 +247,9 @@ class RecommendationService:
                             created_at=datetime.now()
                         )
                         recommendations.append(rec)
-
                     return recommendations
-
+            
             return []
-
         except Exception as e:
             logger.error(f"Error getting similar movies: {str(e)}")
             return []

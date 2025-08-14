@@ -9,11 +9,11 @@ import redis
 import json
 from datetime import datetime, timedelta
 
-from database import get_db, engine  # Fixed import
-from models import Base, Recommendation  # Fixed import
-from schemas import Recommendation as RecommendationSchema, RecommendationCreate  # Fixed import
-from services import RecommendationService  # Fixed import
-from utils import get_redis_client, setup_logging  # Fixed import
+from src.database import get_db, engine  # Fixed import
+from src.models import Base, Recommendation  # Fixed import
+from src.schemas import Recommendation as RecommendationSchema, RecommendationCreate  # Fixed import
+from src.services import RecommendationService  # Fixed import
+from src.utils import get_redis_client, setup_logging  # Fixed import
 
 # Create database tables
 Base.metadata.create_all(bind=engine)

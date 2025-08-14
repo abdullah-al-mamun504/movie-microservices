@@ -16,6 +16,11 @@ def setup_logging():
     """
     log_level = os.getenv("LOG_LEVEL", "INFO")
     
+    # Convert string log level to logging constant
+    numeric_level = getattr(logging, log_level.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError(f'Invalid log level: {log_level}')
+    
     logging_config = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -34,9 +39,8 @@ def setup_logging():
         "loggers": {
             "": {
                 "handlers": ["console"],
-                "level": log_level
+                "level": numeric_level
             }
         }
     }
-    
     dictConfig(logging_config)
