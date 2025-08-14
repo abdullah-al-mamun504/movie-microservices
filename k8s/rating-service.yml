@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rating-service-deployment
+  namespace: movie-microservices
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rating-service
+  template:
+    metadata:
+      labels:
+        app: rating-service
+    spec:
+      containers:
+      - name: rating-service
+        image: REPLACE_WITH_YOUR_REGISTRY/movie-microservices/rating-service:latest
+        ports:
+        - containerPort: 3002
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: movie-microservices-config
+              key: NODE_ENV
+        - name: PORT
+          value: "3002"
+        - name: RATINGS_DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: ratings-db-secret
+              key: database
+        - name: RATINGS_DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: ratings-db-secret
+              key: username
+        - name: RATINGS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ratings-db-secret
+              key: password
+        - name: RATINGS_DB_HOST
+          value: "ratings-db-service"
+        - name: RATINGS_DB_PORT_INTERNAL
+          value: "5432"
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: movie-microservices-config
+              key: REDIS_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: key
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: movie-microservices-config
+              key: LOG_LEVEL
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: rating-service-logs
+          mountPath: /app/logs
+      volumes:
+      - name: rating-service-logs
+        persistentVolumeClaim:
+          claimName: rating-service-logs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rating-service
+  namespace: movie-microservices
+spec:
+  selector:
+    app: rating-service
+  ports:
+    - protocol: TCP
+      port: 3002
+      targetPort: 3002
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rating-service-logs-pvc
+  namespace: movie-microservices
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rating-service-hpa
+  namespace: movie-microservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rating-service-deployment
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

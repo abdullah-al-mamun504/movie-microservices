@@ -1,0 +1,113 @@
+package middleware
+
+import (
+    "movie-microservices/watchlist-service/internal/config"
+    "net/http"
+    "time"
+
+    "github.com/gin-gonic/gin"
+    "github.com/golang-jwt/jwt/v5"
+    "github.com/rs/zerolog/log"
+)
+
+func Logger() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        start := time.Now()
+        path := c.Request.URL.Path
+        raw := c.Request.URL.RawQuery
+
+        // Process request
+        c.Next()
+
+        // Log after processing
+        end := time.Now()
+        latency := end.Sub(start)
+
+        clientIP := c.ClientIP()
+        method := c.Request.Method
+        statusCode := c.Writer.Status()
+        bodySize := c.Writer.Size()
+
+        if raw != "" {
+            path = path + "?" + raw
+        }
+
+        log.Info().
+            Str("client_ip", clientIP).
+            Str("method", method).
+            Str("path", path).
+            Int("status", statusCode).
+            Str("latency", latency.String()).
+            Int("body_size", bodySize).
+            Msg("HTTP request")
+    }
+}
+
+func CORS() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+        c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+        if c.Request.Method == "OPTIONS" {
+            c.AbortWithStatus(http.StatusNoContent)
+            return
+        }
+
+        c.Next()
+    }
+}
+
+func RateLimiter() gin.HandlerFunc {
+    // This is a simple implementation. In production, you might want to use
+    // a more sophisticated rate limiter like https://github.com/ulule/limiter
+    return gin.HandlerFunc(func(c *gin.Context) {
+        c.Next()
+    })
+}
+
+func Authenticate() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        tokenString := c.GetHeader("Authorization")
+        if tokenString == "" {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
+            c.Abort()
+            return
+        }
+
+        // Remove "Bearer " prefix
+        tokenString = tokenString[7:]
+
+        // Parse token
+        token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+            if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+                return nil, jwt.ErrSignatureInvalid
+            }
+            return []byte(config.JWTConfig.Secret), nil
+        })
+
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+            c.Abort()
+            return
+        }
+
+        if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+            // Extract user ID from claims
+            userID, ok := claims["sub"].(float64)
+            if !ok {
+                c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+                c.Abort()
+                return
+            }
+
+            // Set user ID in context
+            c.Set("userID", int(userID))
+            c.Next()
+        } else {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+            c.Abort()
+            return
+        }
+    }
+}

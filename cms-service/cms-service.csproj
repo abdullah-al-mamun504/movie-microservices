@@ -1,0 +1,104 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- ==============================================
+       SECTION: Project Properties
+       These properties control the build behavior
+  ============================================== -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CmsService</RootNamespace>
+    
+    <!-- ==============================================
+         CONFIGURATION FLAGS
+         Set these to 'true' to include tests or migrations
+    ============================================== -->
+    <IncludeTests>false</IncludeTests>
+    <IncludeMigrations>false</IncludeMigrations>
+  </PropertyGroup>
+  
+  <!-- ==============================================
+       SECTION: Conditional Compilation
+       These items are conditionally included based on the flags above
+  ============================================== -->
+  <!-- Include tests if IncludeTests is true -->
+  <ItemGroup Condition="'$(IncludeTests)' == 'true'">
+    <!-- Add test packages when tests are included -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="NSubstitute" Version="5.1.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
+  </ItemGroup>
+  
+  <!-- Include migrations if IncludeMigrations is true -->
+  <ItemGroup Condition="'$(IncludeMigrations)' == 'true'">
+    <!-- Add migration tools when migrations are included -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  
+  <!-- ==============================================
+       SECTION: Content files
+       These files are included in the build output
+       but not compiled as code
+  ============================================== -->
+  <ItemGroup>
+    <!-- Include appsettings.json in the output directory -->
+    <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  
+  <!-- ==============================================
+       SECTION: Conditional Exclusions
+       These items are conditionally excluded based on the flags above
+  ============================================== -->
+  <!-- Exclude tests if IncludeTests is false -->
+  <ItemGroup Condition="'$(IncludeTests)' != 'true'">
+    <Compile Remove="tests\**\*.cs" />
+  </ItemGroup>
+  
+  <!-- Exclude migrations if IncludeMigrations is false -->
+  <ItemGroup Condition="'$(IncludeMigrations)' != 'true'">
+    <Compile Remove="migrations\**\*.cs" />
+  </ItemGroup>
+  
+  <!-- ==============================================
+       SECTION: Package references
+       These are the NuGet packages your project depends on
+  ============================================== -->
+  <ItemGroup>
+    <!-- ASP.NET Core and Web API packages -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
+    
+    <!-- Entity Framework Core with PostgreSQL packages -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
+    
+    <!-- JWT Authentication packages -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.2.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.0" />
+    
+    <!-- CORS package -->
+    <PackageReference Include="Microsoft.AspNetCore.Cors" Version="2.2.0" />
+  </ItemGroup>
+  
+  <!-- ==============================================
+       SECTION: Physical folders
+       These folders are included in the project
+  ============================================== -->
+  <ItemGroup>
+    <!-- Include the uploads folder in the project -->
+    <Folder Include="uploads\" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: movie-microservices-config
+  namespace: movie-microservices
+data:
+  # Redis configuration
+  REDIS_URL: "redis://redis-service:6379"
+  
+  # JWT configuration
+  JWT_ISSUER: "movie-microservices"
+  JWT_AUDIENCE: "movie-microservices-clients"
+  JWT_EXPIRATION_MINUTES: "60"
+  
+  # Service URLs
+  USER_SERVICE_URL: "http://user-service:8080"
+  MOVIE_SERVICE_URL: "http://movie-service:3001"
+  RECOMMENDATION_SERVICE_URL: "http://recommendation-service:8000"
+  RATING_SERVICE_URL: "http://rating-service:3002"
+  WATCHLIST_SERVICE_URL: "http://watchlist-service:3003"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:3004"
+  CMS_SERVICE_URL: "http://cms-service:8081"
+  
+  # Node environment
+  NODE_ENV: "production"
+  
+  # ASPNET Core environment
+  ASPNETCORE_ENVIRONMENT: "Production"
+  
+  # Logging level
+  LOG_LEVEL: "info"
