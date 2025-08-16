@@ -2,10 +2,9 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm i --only=production
+RUN npm i  # Remove --only=production to install devDependencies too
 COPY . .
 RUN npm run build
-
 # Production stage
 FROM nginx:alpine
 COPY --from=build /app/build /usr/share/nginx/html

@@ -237,7 +237,7 @@ services:
     environment:
       TZ: "Asia/Dhaka"
       # React build-time environment variables can be added here
-      # REACT_APP_API_URL: http://localhost:8080
+      REACT_APP_API_URL: http://api-gateway:8080
     ports:
       - "3000:80"                     # Serve frontend on port 3000, Nginx runs on port 80 inside container
     restart: unless-stopped
