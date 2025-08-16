@@ -128,119 +128,95 @@ LOG_LEVEL=info
 ```
 
 
-# Movie Microservices API Reference
+# Movie Microservices API Documentation
 
-This document lists all endpoints for the Movie Microservices project along with example `curl` commands.
-
----
-
-## Table of Contents
-
-- [CMS Service](#cms-service)
-- [Movie Service](#movie-service)
-- [Rating Service](#rating-service)
-- [User Service](#user-service)
-- [Watchlist Service](#watchlist-service)
-- [Recommendation Service](#recommendation-service)
-- [API Gateway](#api-gateway)
+This document contains all API endpoints for the Movie Microservices project, along with example `curl` commands.
 
 ---
 
-## CMS Service
+## CMS Service (Port: 8081)
 
-**Base URL:** `http://localhost:8081`
-
-| Endpoint | Method | Description | Example curl |
-|----------|--------|-------------|--------------|
-| /countries | GET | Get all countries | `curl -X GET http://localhost:8081/countries` |
-| /countries | POST | Create a country | `curl -X POST http://localhost:8081/countries -H "Content-Type: application/json" -d '{"name":"USA"}'` |
-| /genres | GET | Get all genres | `curl -X GET http://localhost:8081/genres` |
-| /genres | POST | Create a genre | `curl -X POST http://localhost:8081/genres -H "Content-Type: application/json" -d '{"name":"Action"}'` |
-| /languages | GET | Get all languages | `curl -X GET http://localhost:8081/languages` |
-| /languages | POST | Create a language | `curl -X POST http://localhost:8081/languages -H "Content-Type: application/json" -d '{"name":"English"}'` |
-| /posters | GET | Get all movie posters | `curl -X GET http://localhost:8081/posters` |
-| /posters | POST | Upload a movie poster | `curl -X POST http://localhost:8081/posters -F "file=@poster.jpg"` |
+| HTTP Method | Endpoint           | Description       | Example curl |
+|------------|------------------|-----------------|--------------|
+| GET        | /api/countries     | Get all countries | `curl http://localhost:8081/api/countries` |
+| GET        | /api/genres        | Get all genres    | `curl http://localhost:8081/api/genres` |
+| GET        | /api/languages     | Get all languages | `curl http://localhost:8081/api/languages` |
+| GET        | /api/posters       | Get all posters   | `curl http://localhost:8081/api/posters` |
+| POST       | /api/countries     | Add country       | `curl -X POST http://localhost:8081/api/countries -H "Content-Type: application/json" -d '{"name":"USA"}'` |
+| POST       | /api/genres        | Add genre         | `curl -X POST http://localhost:8081/api/genres -H "Content-Type: application/json" -d '{"name":"Action"}'` |
+| POST       | /api/languages     | Add language      | `curl -X POST http://localhost:8081/api/languages -H "Content-Type: application/json" -d '{"name":"English"}'` |
+| POST       | /api/posters       | Upload poster     | `curl -X POST http://localhost:8081/api/posters -F "file=@/path/to/poster.jpg"` |
 
 ---
 
-## Movie Service
+## Movie Service (Port: 3001)
 
-**Base URL:** `http://localhost:3001`
-
-| Endpoint | Method | Description | Example curl |
-|----------|--------|-------------|--------------|
-| /movies | GET | Get all movies | `curl -X GET http://localhost:3001/movies` |
-| /movies/:id | GET | Get movie details | `curl -X GET http://localhost:3001/movies/1` |
-| /movies/search | GET | Search movies | `curl -X GET "http://localhost:3001/movies/search?query=Matrix"` |
-| /movies/popular | GET | Get popular movies | `curl -X GET http://localhost:3001/movies/popular` |
-| /movies/top-rated | GET | Get top-rated movies | `curl -X GET http://localhost:3001/movies/top-rated` |
-| /movies/upcoming | GET | Get upcoming movies | `curl -X GET http://localhost:3001/movies/upcoming` |
-| /genres | GET | Get movie genres | `curl -X GET http://localhost:3001/genres` |
+| HTTP Method | Endpoint                 | Description      | Example curl |
+|------------|--------------------------|-----------------|--------------|
+| GET        | /api/movies              | Get all movies   | `curl http://localhost:3001/api/movies` |
+| GET        | /api/movies/{id}         | Get movie by ID  | `curl http://localhost:3001/api/movies/1` |
+| POST       | /api/movies              | Add movie        | `curl -X POST http://localhost:3001/api/movies -H "Content-Type: application/json" -d '{"title":"Inception","year":2010}'` |
+| GET        | /api/movies/search       | Search movies    | `curl http://localhost:3001/api/movies/search?query=Inception` |
+| GET        | /api/movies/popular      | Popular movies   | `curl http://localhost:3001/api/movies/popular` |
+| GET        | /api/movies/top-rated    | Top rated movies | `curl http://localhost:3001/api/movies/top-rated` |
+| GET        | /api/movies/upcoming     | Upcoming movies  | `curl http://localhost:3001/api/movies/upcoming` |
 
 ---
 
-## Rating Service
+## Rating Service (Port: 3002)
 
-**Base URL:** `http://localhost:3002`
-
-| Endpoint | Method | Description | Example curl |
-|----------|--------|-------------|--------------|
-| /ratings | GET | Get all ratings | `curl -X GET http://localhost:3002/ratings` |
-| /ratings | POST | Add rating | `curl -X POST http://localhost:3002/ratings -H "Content-Type: application/json" -d '{"userId":1,"movieId":2,"rating":5}'` |
-| /ratings/:id | GET | Get rating by ID | `curl -X GET http://localhost:3002/ratings/1` |
+| HTTP Method | Endpoint              | Description       | Example curl |
+|------------|---------------------|-----------------|--------------|
+| GET        | /api/ratings         | Get all ratings  | `curl http://localhost:3002/api/ratings` |
+| GET        | /api/ratings/{id}    | Get rating by ID | `curl http://localhost:3002/api/ratings/1` |
+| POST       | /api/ratings         | Add rating       | `curl -X POST http://localhost:3002/api/ratings -H "Content-Type: application/json" -d '{"movieId":1,"userId":1,"score":5}'` |
 
 ---
 
-## User Service
+## User Service (Port: 8082)
 
-**Base URL:** `http://localhost:8082`
-
-| Endpoint | Method | Description | Example curl |
-|----------|--------|-------------|--------------|
-| /auth/register | POST | Register user | `curl -X POST http://localhost:8082/auth/register -H "Content-Type: application/json" -d '{"email":"test@test.com","password":"123456"}'` |
-| /auth/login | POST | Login user | `curl -X POST http://localhost:8082/auth/login -H "Content-Type: application/json" -d '{"email":"test@test.com","password":"123456"}'` |
-| /users | GET | Get all users | `curl -X GET http://localhost:8082/users` |
-| /users/:id | GET | Get user by ID | `curl -X GET http://localhost:8082/users/1` |
+| HTTP Method | Endpoint                 | Description  | Example curl |
+|------------|--------------------------|------------|--------------|
+| POST       | /api/auth/register       | User signup | `curl -X POST http://localhost:8082/api/auth/register -H "Content-Type: application/json" -d '{"email":"a@b.com","password":"123"}'` |
+| POST       | /api/auth/login          | User login  | `curl -X POST http://localhost:8082/api/auth/login -H "Content-Type: application/json" -d '{"email":"a@b.com","password":"123"}'` |
+| GET        | /api/users               | Get all users | `curl http://localhost:8082/api/users` |
+| GET        | /api/users/{id}          | Get user by ID | `curl http://localhost:8082/api/users/1` |
 
 ---
 
-## Watchlist Service
+## Watchlist Service (Port: 3003)
 
-**Base URL:** `http://localhost:3003`
-
-| Endpoint | Method | Description | Example curl |
-|----------|--------|-------------|--------------|
-| /watchlist | GET | Get watchlist for user | `curl -X GET http://localhost:3003/watchlist?userId=1` |
-| /watchlist | POST | Add movie to watchlist | `curl -X POST http://localhost:3003/watchlist -H "Content-Type: application/json" -d '{"userId":1,"movieId":2}'` |
-| /watchlist/:id | DELETE | Remove movie from watchlist | `curl -X DELETE http://localhost:3003/watchlist/1` |
-
----
-
-## Recommendation Service
-
-**Base URL:** `http://localhost:8000`
-
-| Endpoint | Method | Description | Example curl |
-|----------|--------|-------------|--------------|
-| /recommendations | GET | Get recommendations for user | `curl -X GET "http://localhost:8000/recommendations?userId=1"` |
+| HTTP Method | Endpoint                  | Description          | Example curl |
+|------------|---------------------------|-------------------|--------------|
+| GET        | /api/watchlist             | Get all watchlist items | `curl http://localhost:3003/api/watchlist` |
+| GET        | /api/watchlist/{userId}    | Get watchlist by user   | `curl http://localhost:3003/api/watchlist/1` |
+| POST       | /api/watchlist             | Add movie to watchlist  | `curl -X POST http://localhost:3003/api/watchlist -H "Content-Type: application/json" -d '{"userId":1,"movieId":1}'` |
+| DELETE     | /api/watchlist/{id}        | Remove movie from watchlist | `curl -X DELETE http://localhost:3003/api/watchlist/1` |
 
 ---
 
-## API Gateway
+## Recommendation Service (Port: 8000)
 
-**Base URL:** `http://localhost:8080`
-
-- All frontend requests should go through the API Gateway.
-- It forwards requests to the appropriate microservices.
-- Example: `/api/movies`, `/api/users`, `/api/watchlist`, `/api/ratings`, `/api/cms`
+| HTTP Method | Endpoint                    | Description               | Example curl |
+|------------|-----------------------------|--------------------------|--------------|
+| GET        | /recommendations             | Get all recommendations   | `curl http://localhost:8000/recommendations` |
+| GET        | /recommendations/{userId}    | Get recommendations for user | `curl http://localhost:8000/recommendations/1` |
+| POST       | /recommendations             | Add recommendation        | `curl -X POST http://localhost:8000/recommendations -H "Content-Type: application/json" -d '{"userId":1,"movieId":1}'` |
 
 ---
 
-## Notes
+## API Gateway (Port: 8080)
 
-- Make sure Redis and all PostgreSQL databases are running before making requests.
-- Use the `.env` file to set API keys, database credentials, and TMDB key.
-- Frontend connects via API Gateway at `http://localhost:8080`.
+| HTTP Method | Endpoint             | Description          | Example curl |
+|------------|--------------------|--------------------|--------------|
+| GET        | /cms/countries      | Proxy to CMS countries | `curl http://localhost:8080/cms/countries` |
+| GET        | /movies/popular     | Proxy to popular movies | `curl http://localhost:8080/movies/popular` |
+| POST       | /users/login        | Proxy to user login | `curl -X POST http://localhost:8080/users/login -H "Content-Type: application/json" -d '{"email":"a@b.com","password":"123"}'` |
+| GET        | /watchlist/1        | Proxy to watchlist by user | `curl http://localhost:8080/watchlist/1` |
+
+---
+
+
 
 
 
