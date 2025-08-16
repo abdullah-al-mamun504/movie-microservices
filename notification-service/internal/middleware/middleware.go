@@ -1,3 +1,5 @@
+// notification-service/internal/middleware/middleware.go
+
 package middleware
 
 import (
@@ -15,23 +17,22 @@ func Logger() gin.HandlerFunc {
         start := time.Now()
         path := c.Request.URL.Path
         raw := c.Request.URL.RawQuery
-
+        
         // Process request
         c.Next()
-
+        
         // Log after processing
         end := time.Now()
         latency := end.Sub(start)
-
         clientIP := c.ClientIP()
         method := c.Request.Method
         statusCode := c.Writer.Status()
         bodySize := c.Writer.Size()
-
+        
         if raw != "" {
             path = path + "?" + raw
         }
-
+        
         log.Info().
             Str("client_ip", clientIP).
             Str("method", method).
@@ -48,12 +49,12 @@ func CORS() gin.HandlerFunc {
         c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
         c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
+        
         if c.Request.Method == "OPTIONS" {
             c.AbortWithStatus(http.StatusNoContent)
             return
         }
-
+        
         c.Next()
     }
 }
@@ -74,24 +75,38 @@ func Authenticate(roles ...string) gin.HandlerFunc {
             c.Abort()
             return
         }
-
+        
         // Remove "Bearer " prefix
-        tokenString = tokenString[7:]
-
+        if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+            tokenString = tokenString[7:]
+        } else {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
+            c.Abort()
+            return
+        }
+        
+        // Load config to get JWT secret
+        cfg, err := config.LoadConfig()
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load configuration"})
+            c.Abort()
+            return
+        }
+        
         // Parse token
         token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
             if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
                 return nil, jwt.ErrSignatureInvalid
             }
-            return []byte(config.JWTConfig.Secret), nil
+            return []byte(cfg.JWT.Secret), nil
         })
-
+        
         if err != nil {
             c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
             c.Abort()
             return
         }
-
+        
         if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
             // Extract user ID from claims
             userID, ok := claims["sub"].(float64)
@@ -100,7 +115,7 @@ func Authenticate(roles ...string) gin.HandlerFunc {
                 c.Abort()
                 return
             }
-
+            
             // Check role if required
             if len(roles) > 0 {
                 userRole, ok := claims["role"].(string)
@@ -109,7 +124,7 @@ func Authenticate(roles ...string) gin.HandlerFunc {
                     c.Abort()
                     return
                 }
-
+                
                 roleAllowed := false
                 for _, role := range roles {
                     if userRole == role {
@@ -117,14 +132,14 @@ func Authenticate(roles ...string) gin.HandlerFunc {
                         break
                     }
                 }
-
+                
                 if !roleAllowed {
                     c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
                     c.Abort()
                     return
                 }
             }
-
+            
             // Set user ID in context
             c.Set("userID", int(userID))
             c.Next()

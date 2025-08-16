@@ -1,3 +1,5 @@
+// notification-service/cmd/main.go
+
 package main
 
 import (
@@ -32,7 +34,6 @@ func main() {
     // Initialize logger
     zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
     log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
-
     if cfg.Environment == "development" {
         log.Logger = log.Logger.Output(zerolog.ConsoleWriter{Out: os.Stdout})
         zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -72,6 +73,12 @@ func main() {
         pushService,
         rdb,
     )
+    
+    // Initialize template service
+    templateService := services.NewTemplateService(templateRepo)
+    
+    // Initialize preference service
+    preferenceService := services.NewPreferenceService(preferenceRepo)
 
     // Initialize controllers
     notificationController := controllers.NewNotificationController(notificationService)
@@ -83,7 +90,6 @@ func main() {
     if cfg.Environment == "production" {
         gin.SetMode(gin.ReleaseMode)
     }
-
     router := gin.Default()
 
     // Add middleware
@@ -143,6 +149,7 @@ func main() {
     quit := make(chan os.Signal, 1)
     signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
     <-quit
+
     log.Info().Msg("Shutting down server...")
 
     // Give outstanding requests a deadline for completion

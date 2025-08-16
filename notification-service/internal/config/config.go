@@ -1,3 +1,5 @@
+// notification-service/internal/config/config.go
+
 package config
 
 import (
@@ -6,13 +8,13 @@ import (
 )
 
 type Config struct {
-    Port       string
+    Port        string
     Environment string
-    Database   DatabaseConfig
-    Redis      RedisConfig
-    JWT        JWTConfig
-    Email      EmailConfig
-    Push       PushConfig
+    Database    DatabaseConfig
+    Redis       RedisConfig
+    JWT         JWTConfig
+    Email       EmailConfig
+    Push        PushConfig
 }
 
 type DatabaseConfig struct {
@@ -54,7 +56,7 @@ func LoadConfig() (*Config, error) {
     viper.AddConfigPath(".")
     viper.AddConfigPath("./config")
     viper.AddConfigPath("/etc/notification-service")
-
+    
     // Set default values
     viper.SetDefault("port", "3004")
     viper.SetDefault("environment", "development")
@@ -73,10 +75,10 @@ func LoadConfig() (*Config, error) {
     viper.SetDefault("email.from_email", "noreply@movie-microservices.com")
     viper.SetDefault("email.from_name", "Movie Microservices")
     viper.SetDefault("push.provider", "fcm")
-
+    
     // Enable environment variable override
     viper.AutomaticEnv()
-
+    
     // Read configuration
     if err := viper.ReadInConfig(); err != nil {
         if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -85,11 +87,11 @@ func LoadConfig() (*Config, error) {
             return nil, fmt.Errorf("error reading config file: %w", err)
         }
     }
-
+    
     var cfg Config
     if err := viper.Unmarshal(&cfg); err != nil {
         return nil, fmt.Errorf("unable to decode config: %w", err)
     }
-
+    
     return &cfg, nil
 }
