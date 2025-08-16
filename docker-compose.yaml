@@ -1,23 +1,47 @@
+# Movie Microservices Docker Compose Configuration
+# This file defines a complete microservices architecture for a movie platform
+# with separate databases for each service and a centralized API gateway
 
 services:
 
+  # ==========================================
+  # INFRASTRUCTURE SERVICES
+  # ==========================================
+
+  # Redis - In-memory cache and session store
+  # Used for caching, session management, and inter-service communication
   redis:
     image: redis:7-alpine
     container_name: redis
     hostname: redis
     ports:
-      - "6379:6379"
+      - "6379:6379"                    # Expose Redis on host port 6379
     volumes:
-      - redis_data:/data
+      - redis_data:/data               # Persist Redis data
     restart: unless-stopped
     networks:
       - app-network
     logging:
       driver: json-file
       options:
-        max-size: 10m
-        max-file: 3
+        max-size: 10m                  # Limit log file size to 10MB
+        max-file: 3                    # Keep maximum 3 log files
+    deploy:                         # Redis resource limits
+      resources:
+        limits:
+          cpus: '0.5'                 # Moderate CPU for caching operations
+          memory: 256M                # Memory for cache data
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
+  # ==========================================
+  # DATABASE SERVICES
+  # Each microservice has its own PostgreSQL database
+  # following the database-per-service pattern
+  # ==========================================
+
+  # User Service Database - Stores user accounts, profiles, authentication data
   users-db:
     image: postgres:15-alpine
     container_name: users-db
@@ -26,20 +50,24 @@ services:
       POSTGRES_DB: ${USERS_DB_NAME}
       POSTGRES_USER: ${USERS_DB_USER}
       POSTGRES_PASSWORD: ${USERS_DB_PASSWORD}
-      TZ: "Asia/Dhaka"              # Time zone env added here
+      TZ: "Asia/Dhaka"              # Time zone for Bangladesh
     ports:
-      - "${USERS_DB_PORT}:5432"
+      - "${USERS_DB_PORT}:5432"     # External port mapping from .env file
     volumes:
-      - users_db_data:/var/lib/postgresql/data
+      - users_db_data:/var/lib/postgresql/data  # Persist database data
     restart: unless-stopped
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${USERS_DB_USER} -d ${USERS_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    deploy:                         # Resource limits for production stability
+      resources:
+        limits:
+          cpus: '0.5'                 # Maximum 0.5 CPU cores
+          memory: 256M                # Maximum 256MB RAM
+        reservations:
+          cpus: '0.1'                 # Reserve 0.1 CPU cores
+          memory: 128M                # Reserve 128MB RAM
 
+  # Movie Service Database - Stores movie information, metadata, genres
   movies-db:
     image: postgres:15-alpine
     container_name: movies-db
@@ -56,12 +84,16 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${MOVIES_DB_USER} -d ${MOVIES_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
+  # Rating Service Database - Stores user ratings and reviews
   ratings-db:
     image: postgres:15-alpine
     container_name: ratings-db
@@ -78,12 +110,16 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${RATINGS_DB_USER} -d ${RATINGS_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
+  # Watchlist Service Database - Stores user watchlists and favorites
   watchlist-db:
     image: postgres:15-alpine
     container_name: watchlist-db
@@ -100,12 +136,16 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${WATCHLIST_DB_USER} -d ${WATCHLIST_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
+  # Notification Service Database - Stores notification history and preferences
   notification-db:
     image: postgres:15-alpine
     container_name: notification-db
@@ -122,12 +162,16 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER} -d ${NOTIFICATION_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
+  # CMS Service Database - Stores content management data, articles, admin settings
   cms-db:
     image: postgres:15-alpine
     container_name: cms-db
@@ -144,12 +188,16 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${CMS_DB_USER} -d ${CMS_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
+  # Recommendation Service Database - Stores ML models, user preferences, recommendation history
   recommendations-db:
     image: postgres:15-alpine
     container_name: recommendations-db
@@ -166,37 +214,32 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${RECOMMENDATIONS_DB_USER} -d ${RECOMMENDATIONS_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
-  api-gateway:
-    build: ./api-gateway
-    image: movie-microservices/api-gateway:latest
-    container_name: api-gateway
-    hostname: api-gateway
-    depends_on:
-      - redis
-      - users-db
+  # ==========================================
+  # FRONTEND SERVICE
+  # ==========================================
+
+  # Frontend - React.js web application served by Nginx
+  # Provides the user interface for the movie platform
+  frontend:
+    build: ./frontend                  # Build from local Dockerfile
+    image: movie-microservices/frontend:latest
+    container_name: frontend
+    hostname: frontend
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      Jwt__Key: ${JWT_SECRET}
-      Jwt__Issuer: movie-microservices
-      Jwt__Audience: movie-microservices-clients
-      Services__UserService: http://user-service:8080
-      Services__MovieService: http://movie-service:3001
-      Services__RecommendationService: http://recommendation-service:8000
-      Services__RatingService: http://rating-service:3002
-      Services__WatchlistService: http://watchlist-service:3003
-      Services__NotificationService: http://notification-service:3004
-      Services__CmsService: http://cms-service:8081
       TZ: "Asia/Dhaka"
-#      DATE_FORMAT: "YYYY-MM-DD"
-#      TIME_FORMAT: "HH:mm:ss"
+      # React build-time environment variables can be added here
+      # REACT_APP_API_URL: http://localhost:8080
     ports:
-      - "8080:8080"
+      - "3000:80"                     # Serve frontend on port 3000, Nginx runs on port 80 inside container
     restart: unless-stopped
     networks:
       - app-network
@@ -205,12 +248,73 @@ services:
       options:
         max-size: 10m
         max-file: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    deploy:                      # Resource limits for Nginx serving static content
+      resources:
+        limits:
+          cpus: '0.3'                 # Frontend needs less CPU than backend services
+          memory: 128M                # Nginx is lightweight
+        reservations:
+          cpus: '0.1'
+          memory: 64M
 
+  # ==========================================
+  # API GATEWAY
+  # Entry point for all client requests
+  # Handles routing, authentication, and load balancing
+  # ==========================================
+
+  # API Gateway - Central entry point (.NET Core)
+  # Routes requests to appropriate microservices
+  # Handles JWT authentication and authorization
+  api-gateway:
+    build: ./api-gateway
+    image: movie-microservices/api-gateway:latest
+    container_name: api-gateway
+    hostname: api-gateway
+    depends_on:                       # Wait for these services before starting
+      - redis
+      - users-db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # JWT Configuration
+      Jwt__Key: ${JWT_SECRET}
+      Jwt__Issuer: movie-microservices
+      Jwt__Audience: movie-microservices-clients
+      # Service URLs for routing requests
+      Services__UserService: http://user-service:8080
+      Services__MovieService: http://movie-service:3001
+      Services__RecommendationService: http://recommendation-service:8000
+      Services__RatingService: http://rating-service:3002
+      Services__WatchlistService: http://watchlist-service:3003
+      Services__NotificationService: http://notification-service:3004
+      Services__CmsService: http://cms-service:8081
+      TZ: "Asia/Dhaka"
+    ports:
+      - "8080:8080"                   # Main API endpoint
+    restart: unless-stopped
+    networks:
+      - app-network
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    deploy:                      # API Gateway resource limits
+      resources:
+        limits:
+          cpus: '1.0'                 # Higher CPU for request routing and JWT processing
+          memory: 512M                # More memory for .NET Core runtime
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  # ==========================================
+  # MICROSERVICES
+  # Each service handles a specific business domain
+  # ==========================================
+
+  # User Service - Handles authentication, user management (.NET Core)
+  # Manages user registration, login, profiles, and authentication
   user-service:
     build: ./user-service
     image: movie-microservices/user-service:latest
@@ -221,16 +325,16 @@ services:
       - redis
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      # Database connection string
       ConnectionStrings__DefaultConnection: Host=users-db;Port=5432;Database=${USERS_DB_NAME};Username=${USERS_DB_USER};Password=${USERS_DB_PASSWORD}
+      # JWT Configuration
       Jwt__Key: ${JWT_SECRET}
       Jwt__Issuer: movie-microservices
       Jwt__Audience: movie-microservices-clients
       Jwt__ExpirationMinutes: 60
       TZ: "Asia/Dhaka"
-#      DATE_FORMAT: "YYYY-MM-DD"
-#      TIME_FORMAT: "HH:mm:ss"
     ports:
-      - "8082:8080"
+      - "8082:8080"                   # External port for direct access (development)
     restart: unless-stopped
     networks:
       - app-network
@@ -239,12 +343,17 @@ services:
       options:
         max-size: 10m
         max-file: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    deploy:                      # User service resource limits
+      resources:
+        limits:
+          cpus: '0.8'                 # Moderate CPU for authentication operations
+          memory: 512M                # .NET Core runtime memory
+        reservations:
+          cpus: '0.2'
+          memory: 256M
 
+  # Movie Service - Manages movie catalog and metadata (Node.js)
+  # Handles movie information, search, filtering, and TMDB API integration
   movie-service:
     build: ./movie-service
     image: movie-microservices/movie-service:latest
@@ -256,21 +365,21 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3001
+      # Database configuration
       MOVIES_DB_NAME: ${MOVIES_DB_NAME}
       MOVIES_DB_USER: ${MOVIES_DB_USER}
       MOVIES_DB_PASSWORD: ${MOVIES_DB_PASSWORD}
       MOVIES_DB_HOST: movies-db
       MOVIES_DB_PORT_INTERNAL: 5432
+      # External APIs
       REDIS_URL: ${REDIS_URL}
-      TMDB_API_KEY: ${TMDB_API_KEY}
+      TMDB_API_KEY: ${TMDB_API_KEY}    # The Movie Database API key
       LOG_LEVEL: info
       TZ: "Asia/Dhaka"
-#      DATE_FORMAT: "YYYY-MM-DD"
-#      TIME_FORMAT: "HH:mm:ss"
     ports:
       - "3001:3001"
     volumes:
-      - ./movie-service/logs:/app/logs
+      - ./movie-service/logs:/app/logs # Mount logs directory for debugging
     restart: unless-stopped
     networks:
       - app-network
@@ -279,12 +388,17 @@ services:
       options:
         max-size: 10m
         max-file: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    deploy:                      # Movie service resource limits
+      resources:
+        limits:
+          cpus: '0.8'                 # CPU for TMDB API calls and movie data processing
+          memory: 384M                # Node.js memory for movie catalog operations
+        reservations:
+          cpus: '0.2'
+          memory: 192M
 
+  # Recommendation Service - ML-powered movie recommendations (Python/FastAPI)
+  # Provides personalized movie recommendations using machine learning algorithms
   recommendation-service:
     build: ./recommendation-service
     image: movie-microservices/recommendation-service:latest
@@ -294,18 +408,18 @@ services:
       - recommendations-db
       - redis
     environment:
+      # Database connection URL
       DATABASE_URL: postgresql://${RECOMMENDATIONS_DB_USER}:${RECOMMENDATIONS_DB_PASSWORD}@recommendations-db:5432/${RECOMMENDATIONS_DB_NAME}
       REDIS_URL: ${REDIS_URL}
+      # Inter-service communication URLs
       USER_SERVICE_URL: http://user-service:8080
       MOVIE_SERVICE_URL: http://movie-service:3001
       RATING_SERVICE_URL: http://rating-service:3002
       JWT_SECRET: ${JWT_SECRET}
       LOG_LEVEL: info
       TZ: "Asia/Dhaka"
-#      DATE_FORMAT: "YYYY-MM-DD"
-#      TIME_FORMAT: "HH:mm:ss"
     ports:
-      - "8000:8000"
+      - "8000:8000"                   # FastAPI default port
     restart: unless-stopped
     networks:
       - app-network
@@ -314,12 +428,17 @@ services:
       options:
         max-size: 10m
         max-file: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    deploy:                      # Recommendation service resource limits
+      resources:
+        limits:
+          cpus: '1.5'                 # High CPU for ML computations and recommendations
+          memory: 1G                  # More memory for ML models and Python runtime
+        reservations:
+          cpus: '0.3'
+          memory: 512M
 
+  # Rating Service - Handles movie ratings and reviews (Node.js)
+  # Manages user ratings, reviews, and rating analytics
   rating-service:
     build: ./rating-service
     image: movie-microservices/rating-service:latest
@@ -331,6 +450,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3002
+      # Database configuration
       RATINGS_DB_NAME: ${RATINGS_DB_NAME}
       RATINGS_DB_USER: ${RATINGS_DB_USER}
       RATINGS_DB_PASSWORD: ${RATINGS_DB_PASSWORD}
@@ -340,8 +460,6 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       LOG_LEVEL: info
       TZ: "Asia/Dhaka"
-#      DATE_FORMAT: "YYYY-MM-DD"
-#     TIME_FORMAT: "HH:mm:ss"
     ports:
       - "3002:3002"
     volumes:
@@ -354,12 +472,17 @@ services:
       options:
         max-size: 10m
         max-file: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    deploy:                      # Rating service resource limits
+      resources:
+        limits:
+          cpus: '0.6'                 # Moderate CPU for rating calculations
+          memory: 384M                # Node.js runtime memory
+        reservations:
+          cpus: '0.15'
+          memory: 192M
 
+  # Watchlist Service - Manages user watchlists and favorites (Go)
+  # Handles user's movie watchlists, favorites, and watch history
   watchlist-service:
     build: ./watchlist-service
     image: movie-microservices/watchlist-service:latest
@@ -371,20 +494,20 @@ services:
     environment:
       PORT: 3003
       ENVIRONMENT: development
+      # Database configuration (Go-style environment variables)
       DATABASE_HOST: watchlist-db
       DATABASE_PORT: 5432
       DATABASE_USER: ${WATCHLIST_DB_USER}
       DATABASE_PASSWORD: ${WATCHLIST_DB_PASSWORD}
       DATABASE_DBNAME: ${WATCHLIST_DB_NAME}
       DATABASE_SSLMODE: disable
+      # Redis configuration
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD:
+      REDIS_PASSWORD:                 # Empty password for development
       REDIS_DB: 0
       JWT_SECRET: ${JWT_SECRET}
       TZ: "Asia/Dhaka"
-#      DATE_FORMAT: "YYYY-MM-DD"
-#      TIME_FORMAT: "HH:mm:ss"
     ports:
       - "3003:3003"
     restart: unless-stopped
@@ -395,12 +518,17 @@ services:
       options:
         max-size: 10m
         max-file: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    deploy:                      # Watchlist service resource limits
+      resources:
+        limits:
+          cpus: '0.5'                 # Lower CPU for simple CRUD operations
+          memory: 256M                # Go runtime is memory efficient
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
+  # Notification Service - Handles email and push notifications (Go)
+  # Sends notifications for new movies, recommendations, and user activities
   notification-service:
     build: ./notification-service
     image: movie-microservices/notification-service:latest
@@ -412,27 +540,29 @@ services:
     environment:
       PORT: 3004
       ENVIRONMENT: development
+      # Database configuration
       DATABASE_HOST: notification-db
       DATABASE_PORT: 5432
       DATABASE_USER: ${NOTIFICATION_DB_USER}
       DATABASE_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
       DATABASE_DBNAME: ${NOTIFICATION_DB_NAME}
       DATABASE_SSLMODE: disable
+      # Redis configuration
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD:
       REDIS_DB: 0
       JWT_SECRET: ${JWT_SECRET}
+      # Email configuration (SendGrid)
       EMAIL_PROVIDER: sendgrid
       EMAIL_API_KEY: ${SENDGRID_API_KEY}
       EMAIL_FROM_EMAIL: noreply@movie-microservices.com
       EMAIL_FROM_NAME: Movie Microservices
+      # Push notification configuration (Firebase Cloud Messaging)
       PUSH_PROVIDER: fcm
       PUSH_API_KEY: ${FCM_API_KEY}
       PUSH_AUTH_TOKEN: ${FCM_AUTH_TOKEN}
       TZ: "Asia/Dhaka"
-#      DATE_FORMAT: "YYYY-MM-DD"
-#      TIME_FORMAT: "HH:mm:ss"
     ports:
       - "3004:3004"
     restart: unless-stopped
@@ -443,12 +573,17 @@ services:
       options:
         max-size: 10m
         max-file: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    deploy:                      # Notification service resource limits
+      resources:
+        limits:
+          cpus: '0.6'                 # CPU for email/push notification processing
+          memory: 256M                # Go runtime memory
+        reservations:
+          cpus: '0.15'
+          memory: 128M
 
+  # CMS Service - Content Management System (.NET Core)
+  # Manages admin panel, content creation, and system configuration
   cms-service:
     build: ./cms-service
     image: movie-microservices/cms-service:latest
@@ -459,15 +594,15 @@ services:
       - redis
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      # Database connection string
       ConnectionStrings__DefaultConnection: Host=cms-db;Port=5432;Database=${CMS_DB_NAME};Username=${CMS_DB_USER};Password=${CMS_DB_PASSWORD}
+      # JWT Configuration
       Jwt__Key: ${JWT_SECRET}
       Jwt__Issuer: movie-microservices
       Jwt__Audience: movie-microservices-clients
       TZ: "Asia/Dhaka"
-#      DATE_FORMAT: "YYYY-MM-DD"
-#      TIME_FORMAT: "HH:mm:ss"
     ports:
-      - "8081:8080"
+      - "8081:8080"                   # Admin panel access
     restart: unless-stopped
     networks:
       - app-network
@@ -476,23 +611,33 @@ services:
       options:
         max-size: 10m
         max-file: 3
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    deploy:                      # CMS service resource limits
+      resources:
+        limits:
+          cpus: '0.7'                 # Moderate CPU for admin operations
+          memory: 512M                # .NET Core runtime memory
+        reservations:
+          cpus: '0.15'
+          memory: 256M
 
+# ==========================================
+# NETWORKING
+# All services communicate through this bridge network
+# ==========================================
 networks:
   app-network:
-    driver: bridge
+    driver: bridge                    # Default Docker bridge network
 
+# ==========================================
+# PERSISTENT STORAGE
+# Named volumes for data persistence
+# ==========================================
 volumes:
-  redis_data:
-  users_db_data:
-  movies_db_data:
-  ratings_db_data:
-  watchlist_db_data:
-  notification_db_data:
-  cms_db_data:
-  recommendations_db_data:
-
+  redis_data:                         # Redis cache and session data
+  users_db_data:                     # User service database
+  movies_db_data:                    # Movie catalog database
+  ratings_db_data:                   # Ratings and reviews database
+  watchlist_db_data:                 # User watchlists database
+  notification_db_data:              # Notification history database
+  cms_db_data:                       # CMS content database
+  recommendations_db_data:           # ML models and recommendation data
