@@ -37,6 +37,10 @@ The application is composed of the following microservices:
 - Go 1.21+ (for Go service development)
 - Python 3.11+ (for Python service development)
 
+## Bring up the application by docker compose 
+
+- docker compose up -d  redis users-db movies-db ratings-db watchlist-db cms-db recommendations-db api-gateway user-service movie-service recommendation-service rating-service watchlist-service  cms-service frontend
+
 
 ######IMPORTANT NOTES###############
 
