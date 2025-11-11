@@ -5,7 +5,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Auth Context
 const AuthContext = createContext();
-
+const baseUrl = process.env.REACT_APP_API_BASE_URL
 const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -37,8 +37,10 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (username, password) => {
+    // const baseUrl = process.env.REACT_APP_API_BASE_URL
     try {
-      const response = await fetch('http://192.168.152.133:8082/api/auth/login', {
+ //     const response = await fetch('http://192.168.152.133:8080/api/auth/login', {
+        const response = await fetch(`${baseUrl}api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
