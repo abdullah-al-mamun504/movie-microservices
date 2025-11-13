@@ -1,28 +1,26 @@
 const { Sequelize } = require('sequelize');
-//const config = require('../config/config');
-const Movie = require('./movie');
-const Comment = require('./comment');
-const env = process.env.NODE_ENV || 'development';
-const config = require('../config/config')[env]; // This is the fix
-// ... rest of the code
+const logger = require('../utils/logger');
 
-const sequelize = new Sequelize(config.database, config.username, config.password, {
-  host: config.host,
-  port: config.port,
-  dialect: 'postgres',
-  logging: config.logging,
-});
-const models = {
-  Movie: Movie(sequelize),
-  Comment: Comment(sequelize),
-};
-// Set up associations
-Object.keys(models).forEach(modelName => {
-  if (models[modelName].associate) {
-    models[modelName].associate(models);
+const sequelize = new Sequelize(
+  process.env.DB_NAME || 'movies_db',
+  process.env.DB_USER || 'movies_admin', 
+  process.env.DB_PASSWORD || 'movies_secure_password_456',
+  {
+    host: process.env.DB_HOST || 'movies-db',
+    port: process.env.DB_PORT || 5432,
+    dialect: 'postgres',
+    logging: (msg) => logger.debug(msg),
+    pool: {
+      max: 10,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    define: {
+      timestamps: true,
+      underscored: true
+    }
   }
-});
-module.exports = {
-  sequelize,
-  ...models,
-};
+);
+
+module.exports = { sequelize };
