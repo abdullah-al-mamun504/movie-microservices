@@ -413,36 +413,36 @@ const MoviesPage = () => {
   const [showMovieModal, setShowMovieModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
 
-  // // Demo data fallback
-  // //const demoMovies = [
-  //   {
-  //     id: 1,
-  //     title: "The Shawshank Redemption",
-  //     director: "Frank Darabont",
-  //     actors: "Tim Robbins, Morgan Freeman",
-  //     rating: 9.3,
-  //     synopsis: "Two imprisoned men bond over a number of years...",
-  //     posterUrl: "https://picsum.photos/seed/movie1/300/450"
-  //   },
-  //   {
-  //     id: 2,
-  //     title: "The Godfather",
-  //     director: "Francis Ford Coppola", 
-  //     actors: "Marlon Brando, Al Pacino",
-  //     rating: 9.2,
-  //     synopsis: "The aging patriarch of an organized crime dynasty...",
-  //     posterUrl: "https://picsum.photos/seed/movie2/300/450"
-  //   },
-  //   {
-  //     id: 3,
-  //     title: "Pulp Fiction",
-  //     director: "Quentin Tarantino",
-  //     actors: "John Travolta, Samuel L. Jackson",
-  //     rating: 8.9,
-  //     synopsis: "The lives of two mob hitmen, a boxer, a gangster...",
-  //     posterUrl: "https://picsum.photos/seed/movie3/300/450"
-  //   }
-  // ];
+  // Demo data fallback
+  const demoMovies = [
+    {
+      id: 1,
+      title: "The Shawshank Redemption",
+      director: "Frank Darabont",
+      actors: "Tim Robbins, Morgan Freeman",
+      rating: 9.3,
+      synopsis: "Two imprisoned men bond over a number of years...",
+      posterUrl: "https://picsum.photos/seed/movie1/300/450"
+    },
+    {
+      id: 2,
+      title: "The Godfather",
+      director: "Francis Ford Coppola", 
+      actors: "Marlon Brando, Al Pacino",
+      rating: 9.2,
+      synopsis: "The aging patriarch of an organized crime dynasty...",
+      posterUrl: "https://picsum.photos/seed/movie2/300/450"
+    },
+    {
+      id: 3,
+      title: "Pulp Fiction",
+      director: "Quentin Tarantino",
+      actors: "John Travolta, Samuel L. Jackson",
+      rating: 8.9,
+      synopsis: "The lives of two mob hitmen, a boxer, a gangster...",
+      posterUrl: "https://picsum.photos/seed/movie3/300/450"
+    }
+  ];
 
   useEffect(() => {
     fetchMovies();
