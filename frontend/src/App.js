@@ -81,6 +81,9 @@ const AuthProvider = ({ children }) => {
   };
 
   const register = async (username, email, password) => {
+    const baseUrl = process.env.REACT_APP_API_BASE_URL
+    console.log('Register baseUrl:', baseUrl);  // to test log
+    console.log('Full URL:', `${baseUrl}api/auth/register`);  //to test log
     try {
       const response = await fetch(`${baseUrl}api/auth/register`, {
         method: 'POST',
