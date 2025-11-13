@@ -452,8 +452,9 @@ const MoviesPage = () => {
   }, []);
 
   const fetchMovies = async () => {
+    const baseUrl = process.env.REACT_APP_API_BASE_URL;
     try {
-      const response = await fetch(`/api/recommendations/top?userId=${currentUser.id}`);
+      const response = await fetch(`${baseUrl}api/recommendations/top?userId=${currentUser.id}`, {
       if (response.ok) {
         const data = await response.json();
 //        setMovies(data.data || demoMovies); // this is responsible for dummy movie
