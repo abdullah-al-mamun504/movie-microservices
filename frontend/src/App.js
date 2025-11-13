@@ -1,11 +1,17 @@
+// src/App.js  
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Container, Navbar, Nav, Card, Button, Form, Table, Modal, Alert, Row, Col } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-// Auth Context
+
+// ✅ Base URL from .env
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
+// ================= Auth Context =================
 const AuthContext = createContext();
-const baseUrl = process.env.REACT_APP_API_BASE_URL
+
 const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -37,7 +43,7 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (username, password) => {
-    // const baseUrl = process.env.REACT_APP_API_BASE_URL
+    const baseUrl = process.env.REACT_APP_API_BASE_URL
     try {
  //     const response = await fetch('http://192.168.152.133:8080/api/auth/login', {
         const response = await fetch(`${baseUrl}api/auth/login`, {
@@ -122,7 +128,8 @@ const AuthProvider = ({ children }) => {
   );
 };
 
-// Navigation Component
+// ================= Navigation =================
+
 const Navigation = () => {
   const { currentUser, logout } = useAuth();
 
@@ -154,7 +161,7 @@ const Navigation = () => {
   );
 };
 
-// Protected Route Component
+// ================= Protected Route =================
 const ProtectedRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
 
@@ -165,7 +172,7 @@ const ProtectedRoute = ({ children }) => {
   return currentUser ? children : <Navigate to="/login" />;
 };
 
-// Login Page
+// ================= Login Page =================
 const LoginPage = () => {
   const [activeTab, setActiveTab] = useState('login');
   const [error, setError] = useState('');
@@ -284,7 +291,8 @@ const LoginPage = () => {
   );
 };
 
-// Movie Modal Component
+// ================= Movie Modal =================
+
 const MovieModal = ({ show, onHide, movie }) => {
   if (!movie) return null;
 
@@ -319,7 +327,9 @@ const MovieModal = ({ show, onHide, movie }) => {
   );
 };
 
-// Rating Modal Component
+
+// ================= Rating Modal =================
+
 const RatingModal = ({ show, onHide, movie, onRatingSubmit }) => {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -392,7 +402,8 @@ const RatingModal = ({ show, onHide, movie, onRatingSubmit }) => {
   );
 };
 
-// Movies Page
+// ================= Movies Page =================
+
 const MoviesPage = () => {
   const { currentUser } = useAuth();
   const [movies, setMovies] = useState([]);
@@ -402,36 +413,36 @@ const MoviesPage = () => {
   const [showMovieModal, setShowMovieModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
 
-  // Demo data fallback
-  const demoMovies = [
-    {
-      id: 1,
-      title: "The Shawshank Redemption",
-      director: "Frank Darabont",
-      actors: "Tim Robbins, Morgan Freeman",
-      rating: 9.3,
-      synopsis: "Two imprisoned men bond over a number of years...",
-      posterUrl: "https://picsum.photos/seed/movie1/300/450"
-    },
-    {
-      id: 2,
-      title: "The Godfather",
-      director: "Francis Ford Coppola", 
-      actors: "Marlon Brando, Al Pacino",
-      rating: 9.2,
-      synopsis: "The aging patriarch of an organized crime dynasty...",
-      posterUrl: "https://picsum.photos/seed/movie2/300/450"
-    },
-    {
-      id: 3,
-      title: "Pulp Fiction",
-      director: "Quentin Tarantino",
-      actors: "John Travolta, Samuel L. Jackson",
-      rating: 8.9,
-      synopsis: "The lives of two mob hitmen, a boxer, a gangster...",
-      posterUrl: "https://picsum.photos/seed/movie3/300/450"
-    }
-  ];
+  // // Demo data fallback
+  // //const demoMovies = [
+  //   {
+  //     id: 1,
+  //     title: "The Shawshank Redemption",
+  //     director: "Frank Darabont",
+  //     actors: "Tim Robbins, Morgan Freeman",
+  //     rating: 9.3,
+  //     synopsis: "Two imprisoned men bond over a number of years...",
+  //     posterUrl: "https://picsum.photos/seed/movie1/300/450"
+  //   },
+  //   {
+  //     id: 2,
+  //     title: "The Godfather",
+  //     director: "Francis Ford Coppola", 
+  //     actors: "Marlon Brando, Al Pacino",
+  //     rating: 9.2,
+  //     synopsis: "The aging patriarch of an organized crime dynasty...",
+  //     posterUrl: "https://picsum.photos/seed/movie2/300/450"
+  //   },
+  //   {
+  //     id: 3,
+  //     title: "Pulp Fiction",
+  //     director: "Quentin Tarantino",
+  //     actors: "John Travolta, Samuel L. Jackson",
+  //     rating: 8.9,
+  //     synopsis: "The lives of two mob hitmen, a boxer, a gangster...",
+  //     posterUrl: "https://picsum.photos/seed/movie3/300/450"
+  //   }
+  // ];
 
   useEffect(() => {
     fetchMovies();
@@ -554,7 +565,9 @@ const MoviesPage = () => {
   );
 };
 
-// Watchlist Page
+
+// ================= Watchlist Page =================
+
 const WatchlistPage = () => {
   const [watchlist, setWatchlist] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -634,7 +647,8 @@ const WatchlistPage = () => {
   );
 };
 
-// Profile Page
+// ================= Profile Page =================
+
 const ProfilePage = () => {
   const { currentUser } = useAuth();
   const [profile, setProfile] = useState({
