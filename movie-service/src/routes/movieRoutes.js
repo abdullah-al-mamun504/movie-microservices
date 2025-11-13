@@ -1,208 +1,268 @@
+// movie-service/src/routes/movieRoutes.js
+
 const express = require('express');
 const router = express.Router();
-const movieService = require('../services/movieService');
-const commentService = require('../services/commentService');
-const { validateMovie, validateComment } = require('../utils/validation');
+const Movie = require('../models/Movie');
+const { 
+  syncTop100Movies, 
+  getMoviesByYear, 
+  getAvailableYears,
+  searchMovies 
+} = require('../services/tmdbService');
 const logger = require('../utils/logger');
 
-// Get all movies with pagination and search
-router.get('/', async (req, res, next) => {
+/**
+ * GET /api/movies
+ * Get all movies with pagination
+ */
+router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    
-    const result = await movieService.getAllMovies(pageNum, limitNum, search);
-    
-    res.status(200).json({
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+    const year = req.query.year ? parseInt(req.query.year) : null;
+
+    const whereClause = { isActive: true };
+    if (year) {
+      whereClause.releaseYear = year;
+    }
+
+    const { count, rows } = await Movie.findAndCountAll({
+      where: whereClause,
+      order: [
+        ['voteAverage', 'DESC'],
+        ['popularity', 'DESC']
+      ],
+      limit: limit,
+      offset: offset
+    });
+
+    res.json({
       success: true,
-      data: result.movies,
+      data: rows,
       pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total: result.total,
-        pages: Math.ceil(result.total / limitNum),
+        page: page,
+        limit: limit,
+        total: count,
+        totalPages: Math.ceil(count / limit)
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching movies:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/movies/top
+ * Get top 100 movies (optionally filtered by year)
+ */
+router.get('/top', async (req, res) => {
+  try {
+    const year = req.query.year ? parseInt(req.query.year) : null;
+    const limit = parseInt(req.query.limit) || 100;
+
+    const whereClause = { isActive: true };
+    if (year) {
+      whereClause.releaseYear = year;
+    }
+
+    const movies = await Movie.findAll({
+      where: whereClause,
+      order: [
+        ['voteAverage', 'DESC'],
+        ['popularity', 'DESC']
+      ],
+      limit: limit
+    });
+
+    res.json({
+      success: true,
+      data: movies,
+      count: movies.length,
+      year: year || 'all'
+    });
+  } catch (error) {
+    logger.error('Error fetching top movies:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/movies/years
+ * Get all available years
+ */
+router.get('/years', async (req, res) => {
+  try {
+    const years = await getAvailableYears();
+    
+    res.json({
+      success: true,
+      data: years
+    });
+  } catch (error) {
+    logger.error('Error fetching years:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/movies/search
+ * Search movies by title
+ */
+router.get('/search', async (req, res) => {
+  try {
+    const { q, year } = req.query;
+
+    if (!q || q.trim().length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Search query is required' 
+      });
+    }
+
+    // First search in local database
+    const whereClause = {
+      title: {
+        [require('sequelize').Op.iLike]: `%${q}%`
       },
+      isActive: true
+    };
+
+    if (year) {
+      whereClause.releaseYear = parseInt(year);
+    }
+
+    const localMovies = await Movie.findAll({
+      where: whereClause,
+      order: [['voteAverage', 'DESC']],
+      limit: 20
+    });
+
+    res.json({
+      success: true,
+      data: localMovies,
+      count: localMovies.length,
+      source: 'database'
     });
   } catch (error) {
-    logger.error('Error getting movies:', error);
-    next(error);
+    logger.error('Error searching movies:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Get movie by ID
-router.get('/:id', async (req, res, next) => {
+/**
+ * GET /api/movies/:id
+ * Get single movie by ID
+ */
+router.get('/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const movie = await movieService.getMovieById(id);
-    
+    const movie = await Movie.findOne({
+      where: {
+        id: req.params.id,
+        isActive: true
+      }
+    });
+
     if (!movie) {
-      return res.status(404).json({
-        success: false,
-        error: 'Movie not found',
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Movie not found' 
       });
     }
-    
-    res.status(200).json({
+
+    res.json({
       success: true,
-      data: movie,
+      data: movie
     });
   } catch (error) {
-    logger.error(`Error getting movie with ID ${req.params.id}:`, error);
-    next(error);
+    logger.error('Error fetching movie:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Create a new movie
-router.post('/', validateMovie, async (req, res, next) => {
+/**
+ * POST /api/movies/sync
+ * Sync top 100 movies from TMDB (Admin only)
+ */
+router.post('/sync', async (req, res) => {
   try {
-    const movieData = req.body;
-    const movie = await movieService.createMovie(movieData);
+    const year = req.body.year ? parseInt(req.body.year) : null;
     
-    res.status(201).json({
+    logger.info(`Starting movie sync${year ? ` for year ${year}` : ''}...`);
+    
+    // Run sync in background
+    syncTop100Movies(year).then((movies) => {
+      logger.info(`Sync completed: ${movies.length} movies synced`);
+    }).catch((error) => {
+      logger.error('Sync failed:', error);
+    });
+
+    res.json({
       success: true,
-      data: movie,
+      message: `Movie sync started${year ? ` for year ${year}` : ''}. This may take a few minutes.`
     });
   } catch (error) {
-    logger.error('Error creating movie:', error);
-    next(error);
+    logger.error('Error starting sync:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Update a movie
-router.put('/:id', validateMovie, async (req, res, next) => {
+/**
+ * GET /api/movies/by-year/:year
+ * Get movies by specific year
+ */
+router.get('/by-year/:year', async (req, res) => {
   try {
-    const { id } = req.params;
-    const movieData = req.body;
-    
-    const movie = await movieService.updateMovie(id, movieData);
-    
+    const year = parseInt(req.params.year);
+    const limit = parseInt(req.query.limit) || 100;
+
+    if (isNaN(year) || year < 1900 || year > 2100) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid year' 
+      });
+    }
+
+    const movies = await getMoviesByYear(year, limit);
+
+    res.json({
+      success: true,
+      data: movies,
+      count: movies.length,
+      year: year
+    });
+  } catch (error) {
+    logger.error(`Error fetching movies for year ${req.params.year}:`, error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/movies/:id
+ * Soft delete a movie (Admin only)
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const movie = await Movie.findByPk(req.params.id);
+
     if (!movie) {
-      return res.status(404).json({
-        success: false,
-        error: 'Movie not found',
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Movie not found' 
       });
     }
-    
-    res.status(200).json({
-      success: true,
-      data: movie,
-    });
-  } catch (error) {
-    logger.error(`Error updating movie with ID ${req.params.id}:`, error);
-    next(error);
-  }
-});
 
-// Delete a movie
-router.delete('/:id', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const result = await movieService.deleteMovie(id);
-    
-    if (!result) {
-      return res.status(404).json({
-        success: false,
-        error: 'Movie not found',
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Movie deleted successfully',
-    });
-  } catch (error) {
-    logger.error(`Error deleting movie with ID ${req.params.id}:`, error);
-    next(error);
-  }
-});
+    movie.isActive = false;
+    await movie.save();
 
-// Get comments for a movie
-router.get('/:id/comments', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { page = 1, limit = 10 } = req.query;
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    
-    const result = await commentService.getCommentsByMovieId(id, pageNum, limitNum);
-    
-    res.status(200).json({
+    res.json({
       success: true,
-      data: result.comments,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total: result.total,
-        pages: Math.ceil(result.total / limitNum),
-      },
+      message: 'Movie deleted successfully'
     });
   } catch (error) {
-    logger.error(`Error getting comments for movie with ID ${req.params.id}:`, error);
-    next(error);
-  }
-});
-
-// Add a comment to a movie
-router.post('/:id/comments', validateComment, async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { content, userId } = req.body;
-    
-    const comment = await commentService.createComment({
-      content,
-      userId,
-      movieId: parseInt(id),
-    });
-    
-    res.status(201).json({
-      success: true,
-      data: comment,
-    });
-  } catch (error) {
-    logger.error(`Error adding comment to movie with ID ${req.params.id}:`, error);
-    next(error);
-  }
-});
-
-// Search movies using TMDB
-router.get('/search/tmdb', async (req, res, next) => {
-  try {
-    const { query, page = 1 } = req.query;
-    
-    if (!query) {
-      return res.status(400).json({
-        success: false,
-        error: 'Query parameter is required',
-      });
-    }
-    
-    const result = await movieService.searchMoviesTmdb(query, parseInt(page));
-    
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    logger.error('Error searching movies via TMDB:', error);
-    next(error);
-  }
-});
-
-// Get popular movies from TMDB
-router.get('/popular/tmdb', async (req, res, next) => {
-  try {
-    const { page = 1 } = req.query;
-    
-    const result = await movieService.getPopularMoviesTmdb(parseInt(page));
-    
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    logger.error('Error getting popular movies from TMDB:', error);
-    next(error);
+    logger.error('Error deleting movie:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
