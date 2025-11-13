@@ -455,6 +455,10 @@ const MoviesPage = () => {
     const baseUrl = process.env.REACT_APP_API_BASE_URL;
     try {
       const response = await fetch(`${baseUrl}api/recommendations/top?userId=${currentUser.id}`, {
+              headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });  
       if (response.ok) {
         const data = await response.json();
 //        setMovies(data.data || demoMovies); // this is responsible for dummy movie
