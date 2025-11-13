@@ -456,13 +456,15 @@ const MoviesPage = () => {
       const response = await fetch(`/api/recommendations/top?userId=${currentUser.id}`);
       if (response.ok) {
         const data = await response.json();
-        setMovies(data.data || demoMovies);
+//        setMovies(data.data || demoMovies); // this is responsible for dummy movie
+        setMovies(data.data || []);  // ✅  Used empty array instead of demoMovies
       } else {
         throw new Error('API not available');
       }
     } catch (error) {
       console.log('Using demo data');
-      setMovies(demoMovies);
+//      setMovies(demoMovies); // this line referenced the demomovies in earlier line
+      setMovies([]);  // ✅ Use empty array instead of demoMovies
     }
     setLoading(false);
   };
